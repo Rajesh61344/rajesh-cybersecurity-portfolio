@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id           Int      @id @default(autoincrement())
+  name         String
+  title        String
+  tagline      String?
+  description  String?
+  email        String?
+  phone        String?
+  location     String?
+  profileImage String?
+  github       String?
+  linkedin     String?
+  resumeUrl    String?
+  availability String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model About {
+  id          Int      @id @default(autoincrement())
+  heading     String
+  description String
+  highlights  String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Skill {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  level     Int      @default(80)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String
+  category     String
+  status       String   @default("ACTIVE")
+  statusType   String   @default("active")
+  technologies String[]
+  progress     Int      @default(80)
+  icon         String   @default("phishing")
+  github       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  featured     Boolean  @default(false)
+  image        String?
+  liveUrl      String?
+}
+
+model Experience {
+  id           Int      @id @default(autoincrement())
+  role         String
+  company      String
+  location     String?
+  startDate    String
+  endDate      String?
+  current      Boolean  @default(false)
+  description  String
+  technologies String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Education {
+  id          Int      @id @default(autoincrement())
+  degree      String
+  institution String
+  location    String?
+  startYear   String?
+  endYear     String?
+  grade       String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Certification {
+  id            Int      @id @default(autoincrement())
+  name          String
+  issuer        String
+  year          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  credentialId  String?
+  credentialUrl String?
+  description   String?
+}
+
+model Resume {
+  id          Int      @id @default(autoincrement())
+  title       String
+  fileUrl     String
+  downloadUrl String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  email       String
+  phone       String?
+  location    String?
+  linkedin    String?
+  github      String?
+  website     String?
+  description String?
+  updatedAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model PasswordResetOtp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  email     String
+  tokenHash String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
