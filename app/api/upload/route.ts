@@ -1,7 +1,7 @@
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,10 @@ const MAX_RESUME_SIZE = 10 * 1024 * 1024;
 
 function safeExtension(filename: string, contentType: string) {
   const fromName = path.extname(filename).toLowerCase();
-  if (/^\.[a-z0-9]{1,8}$/.test(fromName)) return fromName;
+
+  if (/^\.[a-z0-9]{1,8}$/.test(fromName)) {
+    return fromName;
+  }
 
   const map: Record<string, string> = {
     "image/jpeg": ".jpg",
@@ -26,6 +29,7 @@ function safeExtension(filename: string, contentType: string) {
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
+
     const file = formData.get("file");
     const type = String(formData.get("type") || "profile");
 
@@ -44,7 +48,9 @@ export async function POST(request: Request) {
     }
 
     const isProfile = type === "profile";
-    const maxSize = isProfile ? MAX_PROFILE_SIZE : MAX_RESUME_SIZE;
+    const maxSize = isProfile
+      ? MAX_PROFILE_SIZE
+      : MAX_RESUME_SIZE;
 
     if (file.size > maxSize) {
       return NextResponse.json(
@@ -72,6 +78,7 @@ export async function POST(request: Request) {
     }
 
     const extension = safeExtension(file.name, file.type);
+
     if (!extension) {
       return NextResponse.json(
         { error: "Unsupported file type." },
@@ -79,30 +86,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const directory = path.join(
-      process.cwd(),
-      "public",
-      "uploads"
-    );
+   const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-    await mkdir(directory, { recursive: true });
+const filename = `portfolio/${type}/${type}-${randomUUID()}${extension}`;
 
-    const filename = `${type}-${randomUUID()}${extension}`;
-    const absolutePath = path.join(directory, filename);
-    const bytes = Buffer.from(await file.arrayBuffer());
-
-    await writeFile(absolutePath, bytes);
+const blob = await put(filename, file, {
+  access: "public",
+  contentType: file.type,
+  ...(token ? { token } : {}),
+});
 
     return NextResponse.json({
       success: true,
-      url: `/uploads/${filename}`,
+      url: blob.url,
+      pathname: blob.pathname,
       filename,
       type,
     });
   } catch (error) {
     console.error("POST /api/upload error:", error);
+
     return NextResponse.json(
-      { error: "Failed to upload file." },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload file.",
+      },
       { status: 500 }
     );
   }

@@ -858,84 +858,107 @@ export default function AdminPage() {
   ======================================================= */
 
   async function addResume() {
-    try {
-      setSaving(true);
+  try {
+    const input = document.createElement("input");
 
-      const title =
-        window.prompt(
-          "Enter resume title:",
-          "Rajesh Reddy - Resume"
-        );
+    input.type = "file";
+    input.accept = ".pdf,application/pdf";
 
-      if (!title?.trim()) {
+    input.onchange = async () => {
+      const file = input.files?.[0];
+
+      if (!file) return;
+
+      if (file.type !== "application/pdf") {
         showNotification(
           "error",
           "RESUME ERROR",
-          "Resume title is required."
+          "Please select a PDF file."
         );
         return;
       }
 
-      const fileUrl =
-        window.prompt(
-          "Enter resume file URL:",
-          "/resume.pdf"
-        );
-
-      if (!fileUrl?.trim()) {
+      if (file.size > 10 * 1024 * 1024) {
         showNotification(
           "error",
           "RESUME ERROR",
-          "Resume file URL is required."
+          "Resume must be 10MB or smaller."
         );
         return;
       }
 
-      const resume =
-        await apiRequest<Resume>(
+      try {
+        setSaving(true);
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("type", "resume");
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          cache: "no-store",
+        });
+
+        const uploadData = (await uploadResponse.json()) as {
+          url?: string;
+          error?: string;
+        };
+
+        if (!uploadResponse.ok || !uploadData.url) {
+          throw new Error(
+            uploadData.error || "Failed to upload resume."
+          );
+        }
+
+        const resume = await apiRequest<Resume>(
           "/api/resume",
           {
             method: "POST",
             body: JSON.stringify({
-              title: title.trim(),
-              fileUrl:
-                fileUrl.trim(),
-              downloadUrl:
-                fileUrl.trim(),
+              title: file.name.replace(/\.pdf$/i, ""),
+              fileUrl: uploadData.url,
+              downloadUrl: uploadData.url,
             }),
           }
         );
 
-      setResumes((items) => [
-        resume,
-        ...items,
-      ]);
+        setResumes((items) => [
+          resume,
+          ...items,
+        ]);
 
-      setActiveTab("resume");
+        showNotification(
+          "success",
+          "RESUME UPLOADED",
+          "Resume uploaded successfully."
+        );
+      } catch (error) {
+        console.error("Resume upload error:", error);
 
-      showNotification(
-        "success",
-        "RESUME ADDED",
-        "Resume added successfully."
-      );
-    } catch (error) {
-      console.error(
-        "Add resume error:",
-        error
-      );
+        showNotification(
+          "error",
+          "UPLOAD ERROR",
+          error instanceof Error
+            ? error.message
+            : "Failed to upload resume."
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
-      showNotification(
-        "error",
-        "ADD ERROR",
-        error instanceof Error
-          ? error.message
-          : "Failed to add resume."
-      );
-    } finally {
-      setSaving(false);
-    }
+    input.click();
+  } catch (error) {
+    console.error("Resume picker error:", error);
+
+    showNotification(
+      "error",
+      "RESUME ERROR",
+      "Unable to open file picker."
+    );
   }
-
+}
   /* =======================================================
      DELETE RESUME
   ======================================================= */
