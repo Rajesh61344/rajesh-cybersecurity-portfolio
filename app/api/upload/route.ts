@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import sharp from "sharp";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -85,14 +86,43 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+let uploadFile: File = file;
+let uploadContentType = file.type;
+let uploadExtension = extension;
 
+if (isProfile) {
+  const inputBuffer = Buffer.from(
+    await file.arrayBuffer()
+  );
+
+  const optimizedBuffer = await sharp(inputBuffer)
+    .resize(1200, 1200, {
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: 82,
+    })
+    .toBuffer();
+
+  uploadFile = new File(
+    [optimizedBuffer],
+    `${path.parse(file.name).name}.webp`,
+    {
+      type: "image/webp",
+    }
+  );
+
+  uploadContentType = "image/webp";
+  uploadExtension = ".webp";
+}
    const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-const filename = `portfolio/${type}/${type}-${randomUUID()}${extension}`;
+const filename = `portfolio/${type}/${type}-${randomUUID()}${uploadExtension}`;
 
-const blob = await put(filename, file, {
+const blob = await put(filename, uploadFile, {
   access: "public",
-  contentType: file.type,
+  contentType: uploadContentType,
   ...(token ? { token } : {}),
 });
 

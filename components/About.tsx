@@ -1,50 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  Code2,
-  Eye,
-  LockKeyhole,
-  ShieldCheck,
-  Terminal,
-  UserRound,
-} from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 type ProfileData = {
+  id?: number;
+  name?: string | null;
+  title?: string | null;
+  tagline?: string | null;
+  description?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
   profileImage?: string | null;
-  image?: string | null;
-  photo?: string | null;
+  github?: string | null;
+  linkedin?: string | null;
+  resumeUrl?: string | null;
+  availability?: string | null;
 };
 
+type TagProps = {
+  children: React.ReactNode;
+};
+
+type InfoCardProps = {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+};
+
+function Tag({ children }: TagProps) {
+  return (
+    <span className="rounded-full border border-cyan-300/10 bg-cyan-300/[0.03] px-3 py-1 font-mono text-[9px] tracking-[0.16em] text-cyan-200/60">
+      {children}
+    </span>
+  );
+}
+
+function InfoCard({ title, icon, children }: InfoCardProps) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 backdrop-blur-sm transition-all duration-300 hover:border-cyan-300/20 hover:bg-white/[0.035]">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/10 bg-cyan-300/[0.04] text-cyan-300/70">
+          {icon}
+        </div>
+
+        <h3 className="font-mono text-[10px] font-bold tracking-[0.2em] text-white/60">
+          {title}
+        </h3>
+      </div>
+
+      <div className="font-mono text-xs leading-6 text-white/40">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function About() {
-  const [visible, setVisible] = useState(false);
+  {/*const [visible, setVisible] = useState(false); */}
+  const [visible, setVisible] = useState(true);
+
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [imageLoading, setImageLoading] = useState(true);
+  const [profileDescription, setProfileDescription] = useState("");
+
+  const [typedName, setTypedName] = useState("");
+  const [typedCommand, setTypedCommand] = useState("");
+  const [typedDescription, setTypedDescription] = useState("");
+
+ const [imageLoading, setImageLoading] = useState(true);
+const [imageError, setImageError] = useState(false);
+
+const profileImageRef = useRef<HTMLDivElement | null>(null);
+
+  /* =====================================================
+     SECTION VISIBILITY
+  ===================================================== */
 
   useEffect(() => {
-    const section = document.getElementById("about");
+    const timer = window.setTimeout(() => {
+      setVisible(true);
+    }, 100);
 
-    if (!section) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-        }
-      },
-      { threshold: 0.12 }
-    );
-
-    observer.observe(section);
-
-    return () => observer.disconnect();
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, []);
 
-  /*
-   * Load profile image from Admin Panel
-   * Admin → Profile → Profile Image
-   */
+  /* =====================================================
+     LOAD PROFILE FROM ADMIN API
+  ===================================================== */
+
   useEffect(() => {
     let mounted = true;
 
@@ -56,41 +101,37 @@ export default function About() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to fetch profile");
+          throw new Error("Failed to load profile");
         }
 
         const data = await response.json();
 
-        if (!mounted) return;
-
-        /*
-         * Supports:
-         * { profileImage: "..." }
-         * { image: "..." }
-         * { photo: "..." }
-         *
-         * Also supports:
-         * { profile: { profileImage: "..." } }
-         */
         const profile: ProfileData =
           data?.profile && typeof data.profile === "object"
             ? data.profile
             : data;
 
-        const image =
-          profile?.profileImage ||
-          profile?.image ||
-          profile?.photo ||
-          null;
+        if (!mounted) return;
 
-        setProfileImage(image);
+        const image =
+          typeof profile?.profileImage === "string"
+            ? profile.profileImage.trim()
+            : "";
+
+        const description =
+          typeof profile?.description === "string"
+            ? profile.description.trim()
+            : "";
+
+        setProfileImage(image || null);
+        setProfileDescription(description);
       } catch (error) {
-        console.error("Failed to load profile image:", error);
+        console.error("Failed to load profile:", error);
+
+        if (!mounted) return;
+
         setProfileImage(null);
-      } finally {
-        if (mounted) {
-          setImageLoading(false);
-        }
+        setProfileDescription("");
       }
     };
 
@@ -101,423 +142,467 @@ export default function About() {
     };
   }, []);
 
+  /* =====================================================
+     LIVE WRITING / TYPEWRITER ANIMATION
+  ===================================================== */
+
+  useEffect(() => {
+    if (!profileDescription) {
+      setTypedName("");
+      setTypedCommand("");
+      setTypedDescription("");
+      return;
+    }
+
+    const nameText = "Rajesh Reddy";
+    const commandText = "cat profile.txt";
+
+    let nameIndex = 0;
+    let commandIndex = 0;
+    let descriptionIndex = 0;
+
+    let nameTimer: number | null = null;
+    let commandTimer: number | null = null;
+    let descriptionTimer: number | null = null;
+
+    setTypedName("");
+    setTypedCommand("");
+    setTypedDescription("");
+
+    /* -----------------------------------------------------
+       TYPE NAME
+    ----------------------------------------------------- */
+
+    nameTimer = window.setInterval(() => {
+      nameIndex += 1;
+
+      setTypedName(nameText.slice(0, nameIndex));
+
+      if (nameIndex >= nameText.length) {
+        if (nameTimer !== null) {
+          window.clearInterval(nameTimer);
+        }
+
+        /* -------------------------------------------------
+           TYPE COMMAND
+        ------------------------------------------------- */
+
+        commandTimer = window.setInterval(() => {
+          commandIndex += 1;
+
+          setTypedCommand(commandText.slice(0, commandIndex));
+
+          if (commandIndex >= commandText.length) {
+            if (commandTimer !== null) {
+              window.clearInterval(commandTimer);
+            }
+
+            /* ---------------------------------------------
+               TYPE FULL DESCRIPTION
+            --------------------------------------------- */
+
+            descriptionTimer = window.setInterval(() => {
+              descriptionIndex += 1;
+
+              setTypedDescription(
+                profileDescription.slice(0, descriptionIndex)
+              );
+
+              if (descriptionIndex >= profileDescription.length) {
+                if (descriptionTimer !== null) {
+                  window.clearInterval(descriptionTimer);
+                }
+              }
+            }, 25);
+          }
+        }, 45);
+      }
+    }, 55);
+
+    return () => {
+      if (nameTimer !== null) {
+        window.clearInterval(nameTimer);
+      }
+
+      if (commandTimer !== null) {
+        window.clearInterval(commandTimer);
+      }
+
+      if (descriptionTimer !== null) {
+        window.clearInterval(descriptionTimer);
+      }
+    };
+  }, [profileDescription]);
+
   return (
     <section
       id="about"
-      className="relative overflow-hidden bg-[#010405] py-28"
+      className="relative overflow-hidden px-4 py-24 sm:px-6 lg:px-8"
     >
-      {/* Background */}
+      {/* Background glow */}
+      <div className="pointer-events-none absolute left-1/2 top-20 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-400/[0.025] blur-[120px]" />
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="about-grid absolute inset-0" />
+      <div className="relative mx-auto max-w-7xl">
 
-        <div className="absolute left-[15%] top-1/3 h-72 w-72 rounded-full bg-cyan-400/[0.025] blur-[120px]" />
-
-        <div className="absolute bottom-0 right-[10%] h-72 w-72 rounded-full bg-blue-400/[0.02] blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-7xl px-6">
-
-        {/* Header */}
+        {/* =================================================
+            SECTION HEADER
+        ================================================= */}
 
         <div
           className={`mb-14 transition-all duration-1000 ${
             visible
               ? "translate-y-0 opacity-100"
-              : "translate-y-10 opacity-0"
+              : "translate-y-6 opacity-0"
           }`}
         >
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-400/[0.035] px-4 py-2">
-            <Eye size={12} className="text-cyan-300" />
+          <div className="mb-4 flex items-center gap-3">
+            <span className="h-px w-10 bg-cyan-300/40" />
 
-            <span className="font-mono text-[8px] font-bold tracking-[0.2em] text-cyan-300">
-              PROFILE // INTELLIGENCE
+            <span className="font-mono text-[10px] font-bold tracking-[0.3em] text-cyan-300/60">
+              01 / ABOUT
             </span>
           </div>
 
-          <h2 className="text-3xl font-black text-white sm:text-4xl md:text-5xl">
+          <h2 className="font-mono text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
             About Me
           </h2>
 
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60">
-            A cybersecurity-focused developer building practical
-            security solutions with a defensive mindset.
+          <p className="mt-4 max-w-2xl font-mono text-xs leading-6 text-white/35">
+            Security-focused developer with an interest in offensive security,
+            defensive engineering, automation, and practical cybersecurity.
           </p>
         </div>
 
-        {/* Main */}
+        {/* =================================================
+            MAIN GRID
+        ================================================= */}
 
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 
-          {/* LEFT */}
+          {/* =================================================
+              LEFT TERMINAL / DESCRIPTION
+          ================================================= */}
 
           <div
-            className={`relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] p-7 backdrop-blur-xl transition-all duration-1000 sm:p-9 ${
+            className={`flex flex-col rounded-3xl border border-white/10 bg-black/20 p-6 shadow-2xl backdrop-blur-md transition-all duration-1000 sm:p-8 ${
               visible
-                ? "translate-x-0 opacity-100"
-                : "-translate-x-10 opacity-0"
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
             }`}
           >
-            <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-400/[0.025] blur-3xl" />
 
-            <div className="relative">
+            {/* Terminal header */}
 
-              {/* Terminal header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-5">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-400/50" />
+                <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/50" />
+                <span className="h-2.5 w-2.5 rounded-full bg-green-400/50" />
+              </div>
 
-              <div className="mb-7 flex items-center gap-3 border-b border-white/[0.07] pb-5">
+              <span className="font-mono text-[9px] tracking-[0.2em] text-white/20">
+                profile.sh
+              </span>
+            </div>
 
-                <div className="flex gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-red-400/60" />
-                  <span className="h-2 w-2 rounded-full bg-yellow-400/60" />
-                  <span className="h-2 w-2 rounded-full bg-emerald-400/60" />
-                </div>
+            {/* Terminal content */}
 
-                <span className="font-mono text-[7px] text-white/35">
-                  rajesh@cybersecurity:~/about
+            <div className="pt-8">
+
+              {/* whoami */}
+
+              <div className="font-mono text-xs">
+                <span className="text-cyan-300/50">$</span>{" "}
+                <span className="text-white/40">
+                  whoami
+                </span>
+              </div>
+
+              {/* Name */}
+
+              <div className="mt-2 min-h-[32px] font-mono text-lg font-bold text-cyan-200 sm:text-xl">
+                {typedName}
+
+                {typedName.length > 0 &&
+                  typedName.length < "Rajesh Reddy".length && (
+                    <span className="ml-1 inline-block h-5 w-px animate-pulse bg-cyan-300/70 align-middle" />
+                  )}
+              </div>
+
+              {/* cat profile */}
+
+              <div className="mt-7 font-mono text-xs">
+                <span className="text-cyan-300/50">$</span>{" "}
+                <span className="text-white/40">
+                  {typedCommand}
                 </span>
 
+                {typedCommand.length > 0 &&
+                  typedCommand.length < "cat profile.txt".length && (
+                    <span className="ml-1 inline-block h-4 w-px animate-pulse bg-cyan-300/70 align-middle" />
+                  )}
               </div>
 
-              {/* Terminal */}
+              {/* =================================================
+                  DESCRIPTION
+                  NO FLEX CENTER
+                  NO FLEX-1
+                  NO 650PX HEIGHT
+              ================================================= */}
 
-              <div className="font-mono text-[8px] leading-7">
+              <div className="mt-8 w-full">
 
-                <p className="text-white/40">
-                  <span className="text-cyan-300">$</span>{" "}
-                  whoami
+                <p className="mb-5 font-mono text-[7px] font-bold tracking-[0.2em] text-cyan-300/50">
+                  PROFILE_DESCRIPTION
                 </p>
 
-                <p className="text-white">
-                  Rajesh Reddy
-                </p>
+                <p className="max-w-3xl whitespace-pre-wrap break-words font-mono text-sm leading-8 text-white/70 sm:text-base">
+                  {typedDescription}
 
-                <p className="mt-3 text-white/40">
-                  <span className="text-cyan-300">$</span>{" "}
-                  cat profile.txt
-                </p>
-
-                <p className="max-w-2xl text-white/65">
-                  Cybersecurity-focused developer interested in
-                  security monitoring, threat detection,
-                  vulnerability analysis, automation and
-                  defensive security.
-                </p>
-
-              </div>
-
-              {/* Description */}
-
-              <div className="mt-7 space-y-4 text-sm leading-7 text-white/65">
-
-                <p>
-                  I enjoy understanding how attacks work and
-                  turning that knowledge into practical defensive
-                  solutions.
-                </p>
-
-                <p>
-                  My projects combine Python, cybersecurity
-                  concepts and data-driven techniques to identify
-                  suspicious activity and security risks.
+                  {profileDescription &&
+                    typedDescription.length <
+                      profileDescription.length && (
+                      <span className="ml-1 inline-block h-5 w-px animate-pulse bg-cyan-300/70 align-middle" />
+                    )}
                 </p>
 
               </div>
 
-              {/* Tags */}
+              {/* Terminal cursor after complete description */}
 
-              <div className="mt-7 flex flex-wrap gap-2">
+              {profileDescription &&
+                typedDescription.length >=
+                  profileDescription.length && (
+                  <div className="mt-6 font-mono text-xs text-cyan-300/50">
+                    <span>$</span>
 
-                <Tag label="THREAT DETECTION" />
-                <Tag label="SECURITY ANALYSIS" />
-                <Tag label="PYTHON" />
-                <Tag label="VULNERABILITY" />
-                <Tag label="DEFENSIVE SECURITY" />
-
-              </div>
-
-            </div>
-          </div>
-
-          {/* RIGHT */}
-
-          <div
-            className={`grid gap-4 transition-all duration-1000 ${
-              visible
-                ? "translate-x-0 opacity-100"
-                : "translate-x-10 opacity-0"
-            }`}
-          >
-
-            {/* PROFILE IMAGE */}
-
-            <div className="group relative overflow-hidden rounded-3xl border border-cyan-400/15 bg-white/[0.02] p-3 backdrop-blur-xl transition-all duration-500 hover:border-cyan-400/30 hover:shadow-[0_20px_70px_rgba(34,211,238,0.08)]">
-
-              {/* Glow */}
-
-              <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-cyan-400/[0.06] blur-3xl" />
-
-              <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#020607]">
-
-                {/* Image */}
-
-                {imageLoading ? (
-                  <div className="flex aspect-[4/3] items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-
-                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-400/20 border-t-cyan-300" />
-
-                      <span className="font-mono text-[7px] tracking-[0.15em] text-white/30">
-                        LOADING_PROFILE...
-                      </span>
-
-                    </div>
-                  </div>
-                ) : profileImage ? (
-                  <div className="relative aspect-[4/3] overflow-hidden">
-
-                    <img
-                      src={profileImage}
-                      alt="Rajesh Reddy"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                      onError={() => setProfileImage(null)}
-                    />
-
-                    {/* Image overlay */}
-
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-cyan-400/[0.04]" />
-
-                    {/* Scan line */}
-
-                    <div className="pointer-events-none absolute left-0 right-0 top-0 h-px animate-pulse bg-cyan-300/40" />
-
-                    {/* Status */}
-
-                    <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-cyan-400/20 bg-black/50 px-3 py-1.5 backdrop-blur-md">
-
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-
-                      <span className="font-mono text-[7px] font-bold tracking-[0.15em] text-cyan-300">
-                        PROFILE ACTIVE
-                      </span>
-
-                    </div>
-
-                    {/* Name overlay */}
-
-                    <div className="absolute bottom-4 left-4 right-4">
-
-                      <div className="rounded-xl border border-white/10 bg-black/50 px-4 py-3 backdrop-blur-md">
-
-                        <p className="font-bold text-white">
-                          Rajesh Reddy
-                        </p>
-
-                        <p className="mt-1 font-mono text-[6px] tracking-[0.15em] text-cyan-300/70">
-                          JUNIOR CYBERSECURITY ANALYST
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-                ) : (
-                  /* Fallback */
-
-                  <div className="flex aspect-[4/3] flex-col items-center justify-center px-6 text-center">
-
-                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.04]">
-
-                      <UserRound
-                        size={25}
-                        className="text-cyan-300/50"
-                      />
-
-                    </div>
-
-                    <p className="font-mono text-[7px] font-bold tracking-[0.15em] text-white/40">
-                      PROFILE IMAGE
-                    </p>
-
-                    <p className="mt-2 max-w-xs font-mono text-[6px] leading-5 text-white/25">
-                      Upload a profile image from Admin Panel →
-                      Profile.
-                    </p>
-
+                    <span className="ml-2 inline-block h-4 w-px animate-pulse bg-cyan-300/60 align-middle" />
                   </div>
                 )}
 
-              </div>
+            </div>
 
-              {/* Image footer */}
+            {/* Tags */}
 
-              <div className="relative flex items-center justify-between px-2 pb-1 pt-3">
+            <div className="mt-8 flex flex-wrap gap-2 border-t border-white/10 pt-6">
+              <Tag>CYBERSECURITY</Tag>
+              <Tag>PYTHON</Tag>
+              <Tag>NETWORK SECURITY</Tag>
+              <Tag>THREAT DETECTION</Tag>
+              <Tag>CTF</Tag>
+            </div>
 
-                <div className="flex items-center gap-2">
+          </div>
 
-                  <LockKeyhole
-                    size={11}
-                    className="text-cyan-300/50"
-                  />
+          {/* =================================================
+              RIGHT SIDE
+          ================================================= */}
 
-                  <span className="font-mono text-[6px] tracking-[0.12em] text-white/25">
-                    SECURE_PROFILE
+          <div
+            className={`flex flex-col gap-6 transition-all delay-150 duration-1000 ${
+              visible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
+            }`}
+          >
+
+            {/* =================================================
+                PROFILE IMAGE
+            ================================================= */}
+
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/20 p-3 shadow-2xl backdrop-blur-md">
+
+              <div
+  ref={profileImageRef}
+  className="group relative aspect-square overflow-hidden rounded-2xl bg-white/[0.02] [perspective:1200px]"
+>
+
+                {profileImage && !imageError ? (
+                  <>
+                    
+
+                    <img
+  src={profileImage}
+  alt="Rajesh Reddy"
+  className="h-full w-full object-cover animate-profile-float transition-transform duration-500 ease-out will-change-transform hover:scale-[1.05] hover:[transform:perspective(1000px)_rotateX(-3deg)_rotateY(5deg)_scale(1.05)]"
+  onLoad={() => {
+    console.log("PROFILE IMAGE LOADED:", profileImage);
+  }}
+  onError={() => {
+    console.error("PROFILE IMAGE FAILED:", profileImage);
+    setImageError(true);
+  }}
+/>
+                  </>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <div className="text-center">
+
+                      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/10 bg-cyan-300/[0.03]">
+                        <span className="font-mono text-2xl text-cyan-300/40">
+                          RR
+                        </span>
+                      </div>
+
+                      <p className="font-mono text-[9px] tracking-[0.2em] text-white/20">
+                        PROFILE IMAGE
+                      </p>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* Image overlay */}
+
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+                <div className="absolute bottom-4 left-4">
+                  <span className="rounded-full border border-cyan-300/10 bg-black/50 px-3 py-1 font-mono text-[8px] tracking-[0.15em] text-cyan-200/60 backdrop-blur-md">
+                    SECURITY ANALYST
                   </span>
-
                 </div>
 
-                <span className="font-mono text-[6px] text-emerald-300/50">
-                  ONLINE
+              </div>
+            </div>
+
+            {/* =================================================
+                SECURITY FIRST
+            ================================================= */}
+
+            <InfoCard
+              title="SECURITY FIRST"
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="h-4 w-4"
+                >
+                  <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              }
+            >
+              <p>
+                Focused on identifying vulnerabilities, understanding attack
+                paths, and building practical security solutions.
+              </p>
+            </InfoCard>
+
+            {/* =================================================
+                DEVELOPMENT
+            ================================================= */}
+
+            <InfoCard
+              title="DEVELOPMENT"
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="h-4 w-4"
+                >
+                  <path d="M8 9l-4 3 4 3" />
+                  <path d="M16 9l4 3-4 3" />
+                  <path d="M14 5l-4 14" />
+                </svg>
+              }
+            >
+              <p>
+                Building security-focused Python projects, automation tools,
+                and practical applications that solve real-world problems.
+              </p>
+            </InfoCard>
+
+            {/* =================================================
+                DEFENSIVE MINDSET
+            ================================================= */}
+
+            <InfoCard
+              title="DEFENSIVE MINDSET"
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="h-4 w-4"
+                >
+                  <path d="M12 3v18" />
+                  <path d="M5 7h14" />
+                  <path d="M7 7l-3 6h6L7 7z" />
+                  <path d="M17 7l-3 6h6l-3-6z" />
+                </svg>
+              }
+            >
+              <p>
+                Thinking like an attacker to understand threats while
+                designing stronger defensive controls and monitoring.
+              </p>
+            </InfoCard>
+
+            {/* =================================================
+                CURRENT FOCUS
+            ================================================= */}
+
+            <div className="rounded-3xl border border-cyan-300/10 bg-cyan-300/[0.025] p-6 backdrop-blur-md">
+
+              <div className="mb-5 flex items-center justify-between">
+
+                <span className="font-mono text-[9px] font-bold tracking-[0.2em] text-cyan-300/60">
+                  CURRENT_FOCUS
+                </span>
+
+                <span className="flex items-center gap-2 font-mono text-[8px] text-green-300/50">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-300/60" />
+                  ACTIVE
                 </span>
 
               </div>
 
-            </div>
+              <div className="space-y-3">
 
-            {/* SECURITY FIRST */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <span className="font-mono text-xs text-white/35">
+                    Offensive Security
+                  </span>
 
-            <InfoCard
-              icon={<ShieldCheck size={18} />}
-              title="SECURITY FIRST"
-              text="Focused on identifying risks, analyzing threats and improving defensive security."
-            />
-
-            {/* DEVELOPMENT */}
-
-            <InfoCard
-              icon={<Code2 size={18} />}
-              title="DEVELOPMENT"
-              text="Building practical cybersecurity tools with Python and modern development workflows."
-            />
-
-            {/* DEFENSIVE */}
-
-            <InfoCard
-              icon={<LockKeyhole size={18} />}
-              title="DEFENSIVE MINDSET"
-              text="Interested in monitoring, detection, vulnerability analysis and security automation."
-            />
-
-            {/* CURRENT FOCUS */}
-
-            <div className="group relative overflow-hidden rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.025] p-6 transition-all duration-500 hover:-translate-y-1 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(34,211,238,0.06)]">
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04]">
-
-                    <Terminal
-                      size={17}
-                      className="text-cyan-300"
-                    />
-
-                  </div>
-
-                  <div>
-
-                    <p className="font-mono text-[7px] font-bold tracking-[0.15em] text-cyan-300">
-                      CURRENT FOCUS
-                    </p>
-
-                    <p className="mt-1 text-sm font-bold text-white">
-                      Cybersecurity
-                    </p>
-
-                  </div>
-
+                  <span className="font-mono text-[9px] text-cyan-300/40">
+                    LEARNING
+                  </span>
                 </div>
 
-                <ArrowRight
-                  size={15}
-                  className="text-cyan-300 transition-transform duration-300 group-hover:translate-x-1"
-                />
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <span className="font-mono text-xs text-white/35">
+                    Python Security
+                  </span>
+
+                  <span className="font-mono text-[9px] text-cyan-300/40">
+                    BUILDING
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-white/35">
+                    Security Analysis
+                  </span>
+
+                  <span className="font-mono text-[9px] text-cyan-300/40">
+                    EXPLORING
+                  </span>
+                </div>
 
               </div>
-
-              <div className="mt-5 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-
-                <div className="h-full w-[82%] animate-pulse rounded-full bg-cyan-300" />
-
-              </div>
-
-              <p className="mt-3 font-mono text-[6px] tracking-[0.12em] text-white/35">
-                CONTINUOUSLY LEARNING // BUILDING // SECURING
-              </p>
-
             </div>
 
           </div>
         </div>
-
       </div>
-
-      <style jsx>{`
-        .about-grid {
-          background-image:
-            linear-gradient(
-              rgba(34, 211, 238, 0.015) 1px,
-              transparent 1px
-            ),
-            linear-gradient(
-              90deg,
-              rgba(34, 211, 238, 0.015) 1px,
-              transparent 1px
-            );
-
-          background-size: 48px 48px;
-
-          mask-image: radial-gradient(
-            ellipse at center,
-            black,
-            transparent 78%
-          );
-        }
-      `}</style>
     </section>
-  );
-}
-
-function Tag({ label }: { label: string }) {
-  return (
-    <span className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 font-mono text-[6px] font-bold tracking-[0.1em] text-white/55 transition-all duration-300 hover:border-cyan-400/25 hover:bg-cyan-400/[0.04] hover:text-cyan-300">
-      {label}
-    </span>
-  );
-}
-
-function InfoCard({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="group rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 transition-all duration-500 hover:-translate-y-1 hover:border-cyan-400/25 hover:bg-cyan-400/[0.025] hover:shadow-[0_20px_50px_rgba(34,211,238,0.05)]">
-
-      <div className="flex gap-4">
-
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] text-cyan-300 transition-transform duration-300 group-hover:scale-110">
-          {icon}
-        </div>
-
-        <div>
-
-          <h3 className="font-mono text-[8px] font-bold tracking-[0.15em] text-white">
-            {title}
-          </h3>
-
-          <p className="mt-2 text-xs leading-6 text-white/55">
-            {text}
-          </p>
-
-        </div>
-
-      </div>
-    </div>
   );
 }

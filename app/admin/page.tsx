@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Info,
   LogOut,
+  Mail,
   Plus,
   RefreshCw,
   Save,
@@ -99,7 +100,7 @@ type Education = {
 type Certification = {
   id: number;
   name: string;
-  issuer: string;
+  issuer: string; 
   year: string;
   credentialId: string | null;
   credentialUrl: string | null;
@@ -122,7 +123,8 @@ type Tab =
   | "experience"
   | "education"
   | "certifications"
-  | "resume";
+  | "resume"
+  | "messages";
 
 type NotificationType = "success" | "error" | "info";
 
@@ -276,6 +278,8 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] =
     useState<Tab>("overview");
 
+  console.log("ACTIVE TAB:", activeTab);
+
   const [profile, setProfile] =
     useState<Profile | null>(null);
 
@@ -299,6 +303,16 @@ export default function AdminPage() {
 
   const [resumes, setResumes] =
     useState<Resume[]>([]);
+
+  const [messages, setMessages] =
+  useState<
+    {
+      id: number;
+      email: string;
+      description: string | null;
+      createdAt: string;
+    }[]
+  >([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -372,18 +386,30 @@ export default function AdminPage() {
           apiRequest<unknown>(
             "/api/resume"
           ),
+          apiRequest<
+  {
+    success: boolean;
+    messages: {
+      id: number;
+      email: string;
+      description: string | null;
+      createdAt: string;
+    }[];
+  }
+>("/api/messages"),
         ]);
 
       const [
-        profileResult,
-        aboutResult,
-        skillsResult,
-        projectsResult,
-        experienceResult,
-        educationResult,
-        certificationsResult,
-        resumeResult,
-      ] = results;
+  profileResult,
+  aboutResult,
+  skillsResult,
+  projectsResult,
+  experienceResult,
+  educationResult,
+  certificationsResult,
+  resumeResult,
+  messagesResult,
+] = results;
 
       if (
         profileResult.status ===
@@ -490,6 +516,21 @@ export default function AdminPage() {
           )
         );
       }
+
+      if (
+  messagesResult.status ===
+  "fulfilled"
+) {
+  console.log(
+    "MESSAGES RESULT:",
+    messagesResult.value
+  );
+  setMessages(
+    messagesResult.value.success
+      ? messagesResult.value.messages
+      : []
+  );
+}
 
       const failed =
         results.filter(
@@ -1015,6 +1056,61 @@ export default function AdminPage() {
       setSaving(false);
     }
   }
+
+/* =======================================================
+   DELETE MESSAGE
+======================================================= */
+
+async function deleteMessage(id: number) {
+  if (
+    !window.confirm(
+      "Delete this message?"
+    )
+  ) {
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    await apiRequest(
+      "/api/messages",
+      {
+        method: "DELETE",
+        body: JSON.stringify({
+          id,
+        }),
+      }
+    );
+
+    setMessages((items) =>
+      items.filter(
+        (item) => item.id !== id
+      )
+    );
+
+    showNotification(
+      "success",
+      "MESSAGE DELETED",
+      "Message deleted successfully."
+    );
+  } catch (error) {
+    console.error(
+      "Delete message error:",
+      error
+    );
+
+    showNotification(
+      "error",
+      "DELETE ERROR",
+      error instanceof Error
+        ? error.message
+        : "Failed to delete message."
+    );
+  } finally {
+    setSaving(false);
+  }
+}
 
   /* =======================================================
      DELETE GENERIC
@@ -2001,7 +2097,12 @@ export default function AdminPage() {
       label: "Resume",
       icon: <FileText size={17} />,
     },
-  ];
+    {
+      id: "messages",
+      label: "Messages",
+      icon: <Mail size={17} />,
+    },
+    ];
 
   /* =======================================================
      RENDER
@@ -2599,6 +2700,7 @@ export default function AdminPage() {
                 )}
 
                 {/* =================================================
+                               {/* =================================================
                     RESUME
                 ================================================= */}
 
@@ -2620,6 +2722,25 @@ export default function AdminPage() {
                     }
                   />
                 )}
+
+                {/* =================================================
+                    MESSAGES
+                ================================================= */}
+
+                {activeTab ===
+                  "messages" && (
+                  <MessagesSection
+  messages={
+    messages
+  }
+  onDelete={
+    deleteMessage
+  }
+  saving={
+    saving
+  }
+/>
+                )}
               </>
             )}
           </div>
@@ -2628,7 +2749,6 @@ export default function AdminPage() {
     </main>
   );
 }
-
 /* =========================================================
    LOADING
 ========================================================= */
@@ -4988,6 +5108,84 @@ function EmptyState({
       {action && (
         <div className="mt-5">
           {action}
+        </div>
+      )}
+    </div>
+  );
+}
+/* =========================================================
+   MESSAGES
+========================================================= */
+function MessagesSection({
+  messages,
+  onDelete,
+  saving,
+}: {
+  messages: {
+    id: number;
+    email: string;
+    description: string | null;
+    createdAt: string | Date;
+  }[];
+  onDelete: (id: number) => void;
+  saving: boolean;
+}) {
+  return (
+    <div>
+      <SectionHeader
+        eyebrow="INBOX"
+        title="Messages"
+        description="Messages received from the portfolio contact form."
+      />
+
+      {messages.length === 0 ? (
+        <EmptyState
+          title="No messages yet"
+          description="Messages submitted through the contact form will appear here."
+        />
+      ) : (
+        <div className="space-y-3">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-cyan-200">
+                    {message.email}
+                  </p>
+
+                 <p className="mt-1 text-xs text-white/25">
+  {new Date(message.createdAt).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })}
+</p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() =>
+                    onDelete(message.id)
+                  }
+                  className="inline-flex items-center justify-center rounded-lg border border-red-400/10 bg-red-400/[0.04] px-3 py-2 text-xs text-red-300/70 transition hover:border-red-400/20 hover:bg-red-400/[0.08] hover:text-red-300 disabled:opacity-40"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <div className="mt-4 whitespace-pre-wrap rounded-xl border border-white/[0.05] bg-black/10 p-4 text-sm leading-6 text-white/55">
+                {message.description ||
+                  "No message content."}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

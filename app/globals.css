@@ -1523,3 +1523,36 @@ textarea:-webkit-autofill:focus {
     transform: scaleX(0);
   }
 }
+
+@keyframes profileFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
+.animate-profile-float {
+  animation: profileFloat 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes profileFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-7px) scale(1.015);
+  }
+}
+
+.animate-profile-float {
+  animation: profileFloat 5s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
