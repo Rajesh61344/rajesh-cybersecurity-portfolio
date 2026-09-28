@@ -19,6 +19,8 @@ export default function Contact() {
   const [formStatus, setFormStatus] =
     useState<FormStatus>("idle");
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -51,8 +53,22 @@ export default function Contact() {
   ) {
     event.preventDefault();
 
-    if (!form.name || !form.email || !form.message) {
+    setErrorMessage("");
+
+    const name = form.name.trim();
+    const email = form.email.trim();
+    const message = form.message.trim();
+
+    // Frontend validation
+    if (!name || !email || !message) {
       setFormStatus("error");
+      setErrorMessage("Please complete all fields.");
+
+      window.setTimeout(() => {
+        setFormStatus("idle");
+        setErrorMessage("");
+      }, 4000);
+
       return;
     }
 
@@ -64,11 +80,28 @@ export default function Contact() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name,
+          email,
+          message,
+        }),
       });
 
+      let data: {
+        success?: boolean;
+        message?: string;
+      } = {};
+
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
       if (!response.ok) {
-        throw new Error("Request failed");
+        throw new Error(
+          data.message || "Unable to send your message."
+        );
       }
 
       setFormStatus("success");
@@ -82,11 +115,20 @@ export default function Contact() {
       window.setTimeout(() => {
         setFormStatus("idle");
       }, 5000);
-    } catch {
+    } catch (error) {
+      console.error("Contact form error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
+
       setFormStatus("error");
 
       window.setTimeout(() => {
         setFormStatus("idle");
+        setErrorMessage("");
       }, 4000);
     }
   }
@@ -305,10 +347,12 @@ export default function Contact() {
                 <div className="flex items-center gap-3">
 
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04]">
+
                     <Send
                       size={16}
                       className="text-cyan-300"
                     />
+
                   </div>
 
                   <div>
@@ -358,7 +402,9 @@ export default function Contact() {
                       })
                     }
                     placeholder="Enter your name"
-                    className="w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)]"
+                    disabled={formStatus === "sending"}
+                    required
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)] disabled:cursor-not-allowed disabled:opacity-50"
                   />
 
                 </div>
@@ -385,7 +431,9 @@ export default function Contact() {
                       })
                     }
                     placeholder="Enter your email"
-                    className="w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)]"
+                    disabled={formStatus === "sending"}
+                    required
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)] disabled:cursor-not-allowed disabled:opacity-50"
                   />
 
                 </div>
@@ -412,7 +460,9 @@ export default function Contact() {
                       })
                     }
                     placeholder="Write your message..."
-                    className="w-full resize-none rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)]"
+                    disabled={formStatus === "sending"}
+                    required
+                    className="w-full resize-none rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition-all duration-300 placeholder:text-white/20 focus:border-cyan-400/35 focus:bg-cyan-400/[0.02] focus:shadow-[0_0_25px_rgba(34,211,238,0.04)] disabled:cursor-not-allowed disabled:opacity-50"
                   />
 
                 </div>
@@ -422,7 +472,7 @@ export default function Contact() {
                 {formStatus === "error" && (
                   <div className="rounded-xl border border-red-400/15 bg-red-400/[0.03] px-4 py-3">
                     <p className="font-mono text-[7px] font-bold text-red-300">
-                      Please complete all fields.
+                      {errorMessage || "Please complete all fields."}
                     </p>
                   </div>
                 )}
@@ -475,7 +525,9 @@ export default function Contact() {
               </form>
 
             </div>
+
           </div>
+
         </div>
 
         {/* Bottom */}
@@ -487,6 +539,7 @@ export default function Contact() {
               : "opacity-0"
           }`}
         >
+
           <span className="relative flex h-2 w-2">
             <span className="absolute inset-0 animate-ping rounded-full bg-cyan-300/50" />
 
@@ -496,6 +549,7 @@ export default function Contact() {
           <span className="font-mono text-[6px] font-bold tracking-[0.16em] text-white/25">
             COMMUNICATION SYSTEM // READY
           </span>
+
         </div>
 
       </div>
